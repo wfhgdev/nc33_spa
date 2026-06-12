@@ -3,8 +3,8 @@
 # ==============================================================================
 # Script de Instalación Interactiva de Nextcloud 33 (Calificación A+)
 # Entorno: Ubuntu Server 26.04 LTS | MariaDB 11.8 | Apache 2.4 | PHP 8.5
-# Características: Automatización de Certbot y Let's Encrypt integrada
-# Autor: wfhgdev / Colaborador AI
+# Características: Automatización de Certbot y Directorio de Datos Seguro Aislado
+# Autor: wfhgdev
 # Fecha: 2026
 # ==============================================================================
 
@@ -175,18 +175,25 @@ else
     exit 1
 fi
 
-# --- FASE 6: DESPLIEGUE DEL CÓDIGO FUENTE DE NEXTCLOUD 33 ---
-echo -e "${CYAN}[6/11] Descargando y desplegando Nextcloud 33 Production...${NC}"
+# --- FASE 6: DESPLIEGUE DEL CÓDIGO FUENTE Y AISLAMIENTO DE DATOS (SEGURIDAD DEFENSA EN PROFUNDIDAD) ---
+echo -e "${CYAN}[6/11] Descargando Nextcloud 33 y estructurando directorios seguros...${NC}"
 NC_PATH="/var/www/nextcloud"
+NC_DATA_PATH="/var/nextcloud-data" # Definición del directorio de almacenamiento aislado del entorno web
 
+# Limpieza y despliegue del binario web
 rm -rf "$NC_PATH"
 curl -sL https://download.nextcloud.com/server/releases/latest-33.tar.bz2 -o /tmp/nextcloud.tar.bz2
 tar -xjf /tmp/nextcloud.tar.bz2 -C /var/www/
-mkdir -p "$NC_PATH/data"
 
+# Crear e implementar las directivas de seguridad para la carpeta de almacenamiento externa
+mkdir -p "$NC_DATA_PATH"
+chown -R www-data:www-data "$NC_DATA_PATH"
+chmod -R 770 "$NC_DATA_PATH" # Solo www-data y root tienen acceso total
+
+# Permisos para el árbol web
 chown -R www-data:www-data "$NC_PATH"
 chmod -R 755 "$NC_PATH"
-echo -e "${VERDE}[OK] Archivos binarios desplegados en $NC_PATH.${NC}\n"
+echo -e "${VERDE}[OK] Código web en $NC_PATH. Almacenamiento privado blindado en $NC_DATA_PATH.${NC}\n"
 
 # --- FASE 7: INSTALACIÓN DESATENDIDA MEDIANTE INTERFAZ OCC ---
 echo -e "${CYAN}[7/11] Ejecutando el proceso de instalación core con OCC...${NC}"
@@ -199,7 +206,7 @@ sudo -u www-data php occ maintenance:install \
   --database-pass="$DB_PASS" \
   --admin-user="$NC_ADMIN" \
   --admin-pass="$NC_PASS" \
-  --data-dir="$NC_PATH/data"
+  --data-dir="$NC_DATA_PATH" # Mapeo directo al directorio aislado externo
 
 if [ $? -eq 0 ]; then
     echo -e "${VERDE}[OK] Instalación de la estructura interna completada con éxito.${NC}\n"
@@ -291,7 +298,6 @@ if [ "$ENABLE_LETSENCRYPT" = true ]; then
     echo -e "${CYAN}Solicitando certificado oficial a los servidores de Let's Encrypt para $DOMAIN...${NC}"
     
     # Ejecución de Certbot de manera no interactiva respetando la configuración previa de Apache
-    # El flag --keep-until-expiring evita solicitudes duplicadas innecesarias.
     certbot --apache --non-interactive --agree-tos --redirect \
         --keep-until-expiring \
         -m "$SSL_EMAIL" \
@@ -301,7 +307,6 @@ if [ "$ENABLE_LETSENCRYPT" = true ]; then
         echo -e "${VERDE}[OK] Certificado SSL emitido e instalado correctamente por Let's Encrypt.${NC}"
         # Asegurar que las cabeceras de seguridad críticas sigan vigentes en el nuevo archivo generado por Certbot
         if [ -f "/etc/apache2/sites-available/nextcloud-le-ssl.conf" ]; then
-            # Comprobar si ya contiene la regla HSTS, si no, inyectarla antes del cierre de VirtualHost
             if ! grep -q "Strict-Transport-Security" /etc/apache2/sites-available/nextcloud-le-ssl.conf; then
                 sed -i '/<\/VirtualHost>/i \    Header always set Strict-Transport-Security "max-age=15552000; includeSubDomains; preload"' /etc/apache2/sites-available/nextcloud-le-ssl.conf
             fi
@@ -334,6 +339,7 @@ echo -e "${VERDE}             ¡INSTALACIÓN DE NEXTCLOUD COMPLETADA CON ÉXITO!
 echo -e "${VERDE}======================================================================${NC}"
 echo -e "${CYAN}Dominio de acceso:${NC} https://$DOMAIN"
 echo -e "${CYAN}Usuario Administrador:${NC} $NC_ADMIN"
+echo -e "${CYAN}Ruta de Datos Aislada:${NC} $NC_DATA_PATH"
 if [ "$ENABLE_LETSENCRYPT" = true ]; then
     echo -e "${VERDE}Estado de Seguridad:${NC} Certificado Let's Encrypt Activo - Calificación A+ Lista."
 else
