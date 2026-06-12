@@ -44,4 +44,4 @@ El script soluciona de manera proactiva todos los dolores de cabeza comunes del 
 Asegúrate de tener **Git** instalado, verifícalo con el comando `git --version`, de lo contrario puedes instalar **Git** (sistema de control de versiones) con el comando: `sudo apt install git`
 
 ```Shell
-git clone https://github.com/wfhgdev/nextcloud-spanish-installer.git && cd nextcloud-spanish-installer && chmod +x ncInstall.sh && sudo ./ncInstall.sh
+git clone https://github.com/wfhgdev/nextcloud-spanish-installer.git && cd nextcloud-spanish-installer && chmod +x install.sh && sudo ./install.sh
